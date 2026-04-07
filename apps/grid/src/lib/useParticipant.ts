@@ -15,10 +15,10 @@ export function useParticipant(roomId: string): {
   const [participant, setParticipant] = useState<Participant | null>(null);
 
   useEffect(() => {
-    let id = sessionStorage.getItem('grid-participant-id');
+    let id = localStorage.getItem('grid-participant-id');
     if (!id) {
       id = crypto.randomUUID();
-      sessionStorage.setItem('grid-participant-id', id);
+      localStorage.setItem('grid-participant-id', id);
     }
 
     const storedName = localStorage.getItem('grid-participant-name') || '';

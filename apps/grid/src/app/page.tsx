@@ -5,10 +5,10 @@ import { useEffect, useState } from 'react';
 import styles from './page.module.css';
 
 function getOrCreateParticipantId(): string {
-  let id = sessionStorage.getItem('grid-participant-id');
+  let id = localStorage.getItem('grid-participant-id');
   if (!id) {
     id = crypto.randomUUID();
-    sessionStorage.setItem('grid-participant-id', id);
+    localStorage.setItem('grid-participant-id', id);
   }
   return id;
 }
