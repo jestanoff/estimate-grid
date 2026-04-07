@@ -1,0 +1,39 @@
+.cell {
+  position: relative;
+  display: flex;
+  padding: 6px;
+  background: white;
+}
+
+.borderRight {
+  border-right: 5px solid var(--color-grid-border);
+}
+
+.borderBottom {
+  border-bottom: 5px solid var(--color-grid-border);
+}
+
+.inner {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #c3cdc1;
+  border-radius: 12px;
+  transition: background 0.15s ease;
+}
+
+.inner:hover {
+  background: #b6c3b4;
+}
+
+.inner.selected {
+  background: var(--color-cell-selected);
+}
+
+.value {
+  font-size: min(18vw, 18vh);
+  font-weight: 400;
+  color: white;
+  user-select: none;
+}

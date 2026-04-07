@@ -1,0 +1,270 @@
+.progressBar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 5px;
+  background: transparent;
+  z-index: 100;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--color-grid-border);
+}
+
+.container {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+
+.gridArea {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  min-height: 0;
+}
+
+.gridWrapper {
+  position: relative;
+  cursor: pointer;
+  user-select: none;
+  height: min(calc(100vh - 32px), calc(100vw - 164px));
+  width: min(calc(100vh - 32px), calc(100vw - 164px));
+  max-height: 100%;
+  max-width: 100%;
+}
+
+.gridDisabled {
+  cursor: default;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  width: 100%;
+  height: 100%;
+  background: white;
+}
+
+.placedEmoji {
+  position: absolute;
+  font-size: 3.75rem;
+  line-height: 1;
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+  cursor: default;
+  z-index: 10;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+}
+
+/* Sidebar */
+
+.sidebar {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 14px;
+  min-width: 140px;
+  max-width: 160px;
+  background: var(--color-grid-bg);
+  border-left: 1px solid #e0e0e0;
+  overflow-y: auto;
+}
+
+.emojiReveal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.myEmoji {
+  font-size: 3.75rem;
+}
+
+.nameLabel {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  font-weight: 500;
+  background: none;
+  border: none;
+  border-bottom: 1px dashed var(--color-text-muted);
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+}
+
+.nameLabel:hover {
+  color: var(--color-text);
+  border-color: var(--color-text);
+}
+
+/* Name input */
+
+.nameForm {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.nameInput {
+  padding: 6px 8px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  outline: none;
+  width: 100%;
+}
+
+.nameInput:focus {
+  border-color: var(--color-accent);
+}
+
+.nameButton {
+  padding: 4px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: inherit;
+  background: var(--color-accent);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* Participants legend */
+
+.legend {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding-top: 8px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legendEmoji {
+  font-size: 1.25rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.legendName {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Vote summary */
+
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding-top: 8px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.summaryTitle {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.summaryRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.summaryValue {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text);
+  min-width: 20px;
+  text-align: right;
+}
+
+.summaryBar {
+  flex: 1;
+  height: 8px;
+  background: #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.summaryBarFill {
+  display: block;
+  height: 100%;
+  background: var(--color-grid-border);
+  border-radius: 4px;
+  min-width: 4px;
+}
+
+.summaryCount {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  min-width: 14px;
+  text-align: right;
+}
+
+/* Info & actions */
+
+.info {
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.actions {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.button {
+  width: 120px;
+  height: 120px;
+  padding: 8px;
+  font-size: 1.6rem;
+  font-weight: 600;
+  font-family: inherit;
+  line-height: 1.2;
+  background: var(--color-button-bg);
+  color: var(--color-button-text);
+  border: 2px solid var(--color-button-border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.button:hover:not(:disabled) {
+  background: var(--color-button-hover-bg);
+  color: var(--color-button-hover-text);
+}
+
+.button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

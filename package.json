@@ -1,0 +1,14 @@
+{
+  "name": "kaluza-grid-app",
+  "private": true,
+  "scripts": {
+    "dev": "turbo dev",
+    "dev:watch": "turbo dev:watch",
+    "build": "turbo build",
+    "lint": "turbo lint"
+  },
+  "devDependencies": {
+    "turbo": "^2"
+  },
+  "packageManager": "pnpm@10.32.1"
+}
