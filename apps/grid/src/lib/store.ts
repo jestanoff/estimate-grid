@@ -1,12 +1,25 @@
 import { GridState, Vote, INITIAL_GRID_STATE, VOTING_DURATION_MS } from './grid';
 import { getRandomEmoji, pickRandomCategory, type EmojiCategory } from './emojis';
 
+const ROOM_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
 type RoomState = {
   state: GridState;
   emojiCategory: EmojiCategory;
+  createdAt: number;
 };
 
 const rooms = new Map<string, RoomState>();
+
+/** Remove rooms older than 24 hours */
+function cleanupExpired(): void {
+  const now = Date.now();
+  for (const [id, room] of rooms) {
+    if (now - room.createdAt > ROOM_TTL_MS) {
+      rooms.delete(id);
+    }
+  }
+}
 
 function getRoom(roomId: string): RoomState {
   let room = rooms.get(roomId);
@@ -14,16 +27,13 @@ function getRoom(roomId: string): RoomState {
     room = {
       state: { ...INITIAL_GRID_STATE, votes: [], participants: {}, names: {} },
       emojiCategory: pickRandomCategory(),
+      createdAt: Date.now(),
     };
     rooms.set(roomId, room);
   }
   return room;
 }
 
-/**
- * Compute the current phase from votingStartedAt.
- * No timers needed — purely derived from the timestamp.
- */
 function computePhase(state: GridState): GridState {
   if (!state.votingStartedAt) return state;
 
@@ -34,10 +44,6 @@ function computePhase(state: GridState): GridState {
   return state;
 }
 
-/**
- * Merge client-known data into the server's room state.
- * This ensures fresh serverless instances learn about active rounds and participants.
- */
 export function mergeClientData(
   roomId: string,
   data: {
@@ -52,7 +58,6 @@ export function mergeClientData(
   const clientRound = data.votingStartedAt || 0;
   const serverRound = room.state.votingStartedAt || 0;
 
-  // If the client knows about a newer round, adopt it
   if (clientRound > serverRound) {
     room.state = {
       ...room.state,
@@ -62,7 +67,6 @@ export function mergeClientData(
     };
   }
 
-  // Always merge participants/names
   if (data.participants) {
     room.state = {
       ...room.state,
@@ -79,7 +83,6 @@ export function mergeClientData(
 
 export function getState(roomId: string): GridState {
   const room = getRoom(roomId);
-  // Always compute phase from time before returning
   room.state = computePhase(room.state);
   return room.state;
 }
@@ -123,7 +126,6 @@ export function setName(roomId: string, participantId: string, name: string): Gr
 export function vote(roomId: string, v: Vote, votingStartedAt?: number): GridState {
   const room = getRoom(roomId);
 
-  // If this instance doesn't know about the round, trust the client
   if (votingStartedAt) {
     const serverRound = room.state.votingStartedAt || 0;
     if (votingStartedAt > serverRound) {
@@ -131,7 +133,6 @@ export function vote(roomId: string, v: Vote, votingStartedAt?: number): GridSta
     }
   }
 
-  // Compute phase from time
   room.state = computePhase(room.state);
   if (room.state.phase !== 'voting') return room.state;
 
@@ -156,10 +157,19 @@ export function startVoting(roomId: string): GridState {
 }
 
 export function roomExists(roomId: string): boolean {
-  return rooms.has(roomId);
+  const room = rooms.get(roomId);
+  if (!room) return false;
+  // Expired rooms don't count
+  if (Date.now() - room.createdAt > ROOM_TTL_MS) {
+    rooms.delete(roomId);
+    return false;
+  }
+  return true;
 }
 
 export function createRoom(roomId: string, adminId: string): void {
+  // Cleanup expired rooms on every create
+  cleanupExpired();
   const room = getRoom(roomId);
   room.state = { ...room.state, adminId };
 }
