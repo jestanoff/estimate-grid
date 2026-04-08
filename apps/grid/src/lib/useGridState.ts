@@ -118,7 +118,6 @@ export function useGridState(roomId: string): {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               participants: current.participants,
-              names: current.names,
               votingStartedAt: current.votingStartedAt,
               votes: current.votes,
             }),

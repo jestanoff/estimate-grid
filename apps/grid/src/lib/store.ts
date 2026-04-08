@@ -48,7 +48,6 @@ export function mergeClientData(
   roomId: string,
   data: {
     participants?: Record<string, string>;
-    names?: Record<string, string>;
     votingStartedAt?: number | null;
     votes?: Vote[];
   }
@@ -71,12 +70,6 @@ export function mergeClientData(
     room.state = {
       ...room.state,
       participants: { ...room.state.participants, ...data.participants },
-    };
-  }
-  if (data.names) {
-    room.state = {
-      ...room.state,
-      names: { ...room.state.names, ...data.names },
     };
   }
 }
