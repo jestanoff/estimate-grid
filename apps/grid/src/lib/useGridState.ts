@@ -1,10 +1,64 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import type { GridState } from './grid';
+import type { GridState, Phase } from './grid';
 import { INITIAL_GRID_STATE } from './grid';
 
 const POLL_INTERVAL = 500;
+
+const PHASE_ORDER: Record<Phase, number> = {
+  waiting: 0,
+  voting: 1,
+  revealed: 2,
+};
+
+/**
+ * Decide whether incoming server state should replace the current client state.
+ * Rules:
+ * - If the incoming state is from a newer round (higher votingStartedAt), always accept
+ * - If same round, only accept if the phase is equal or further along
+ * - If same round + same phase, accept if it has more or equal votes (more = more up to date)
+ * - If incoming is from an older round, reject entirely
+ * - Always merge participants/names regardless
+ */
+function mergeState(prev: GridState, incoming: GridState): GridState {
+  const mergedParticipants = { ...prev.participants, ...incoming.participants };
+  const mergedNames = { ...prev.names, ...incoming.names };
+
+  const prevRound = prev.votingStartedAt || 0;
+  const incomingRound = incoming.votingStartedAt || 0;
+
+  // Newer round — accept fully
+  if (incomingRound > prevRound) {
+    return { ...incoming, participants: mergedParticipants, names: mergedNames };
+  }
+
+  // Older round — keep current, just merge participants/names
+  if (incomingRound < prevRound) {
+    return { ...prev, participants: mergedParticipants, names: mergedNames };
+  }
+
+  // Same round — only move phase forward, never backward
+  const prevPhase = PHASE_ORDER[prev.phase];
+  const incomingPhase = PHASE_ORDER[incoming.phase];
+
+  if (incomingPhase < prevPhase) {
+    // Stale phase from another instance — keep current
+    return { ...prev, participants: mergedParticipants, names: mergedNames };
+  }
+
+  if (incomingPhase > prevPhase) {
+    // Phase advanced — accept
+    return { ...incoming, participants: mergedParticipants, names: mergedNames };
+  }
+
+  // Same round, same phase — keep the one with more votes
+  if (incoming.votes.length >= prev.votes.length) {
+    return { ...incoming, participants: mergedParticipants, names: mergedNames };
+  }
+
+  return { ...prev, participants: mergedParticipants, names: mergedNames };
+}
 
 export function useGridState(roomId: string): {
   state: GridState;
@@ -20,7 +74,6 @@ export function useGridState(roomId: string): {
     async function poll() {
       while (active) {
         try {
-          // Send our known participants/names so any fresh instance learns about them
           const current = stateRef.current;
           const res = await fetch(`/api/room/${roomId}/state`, {
             method: 'POST',
@@ -33,12 +86,7 @@ export function useGridState(roomId: string): {
           if (res.ok) {
             const data = await res.json();
             if (active) {
-              // Merge: keep the richer participants/names set
-              setState((prev) => ({
-                ...data,
-                participants: { ...prev.participants, ...data.participants },
-                names: { ...prev.names, ...data.names },
-              }));
+              setState((prev) => mergeState(prev, data));
             }
           }
         } catch {
@@ -53,11 +101,7 @@ export function useGridState(roomId: string): {
   }, [roomId]);
 
   const updateState = useCallback((newState: GridState) => {
-    setState((prev) => ({
-      ...newState,
-      participants: { ...prev.participants, ...newState.participants },
-      names: { ...prev.names, ...newState.names },
-    }));
+    setState((prev) => mergeState(prev, newState));
   }, []);
 
   return { state, updateState };

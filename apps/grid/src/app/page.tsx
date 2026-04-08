@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { markAsAdmin } from '@/lib/useParticipant';
+import { KaluzaLogo } from '@/components/KaluzaLogo';
 import styles from './page.module.css';
 
 function getOrCreateParticipantId(): string {
@@ -38,6 +39,9 @@ export default function Home() {
 
   return (
     <main className={styles.main}>
+      <div className={styles.logo}>
+        <KaluzaLogo />
+      </div>
       <h1 className={styles.title}>GRID</h1>
       <p className={styles.subtitle}>
         A collaborative planning and voting tool for teams.
