@@ -8,6 +8,11 @@
   padding: 20px;
 }
 
+.logo {
+  width: 160px;
+  color: var(--color-text);
+}
+
 .title {
   font-size: 4rem;
   font-weight: 800;
