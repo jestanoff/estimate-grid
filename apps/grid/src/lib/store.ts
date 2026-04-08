@@ -4,7 +4,6 @@ import { getRandomEmoji, pickRandomCategory, type EmojiCategory } from './emojis
 type RoomState = {
   state: GridState;
   emojiCategory: EmojiCategory;
-  revealTimer: ReturnType<typeof setTimeout> | null;
 };
 
 const rooms = new Map<string, RoomState>();
@@ -15,7 +14,6 @@ function getRoom(roomId: string): RoomState {
     room = {
       state: { ...INITIAL_GRID_STATE, votes: [], participants: {}, names: {} },
       emojiCategory: pickRandomCategory(),
-      revealTimer: null,
     };
     rooms.set(roomId, room);
   }
@@ -23,25 +21,67 @@ function getRoom(roomId: string): RoomState {
 }
 
 /**
- * Merge client-known participants/names into the server's room state.
- * This ensures that even if a serverless instance is fresh, it learns
- * about all participants from the client's request.
+ * Compute the current phase from votingStartedAt.
+ * No timers needed — purely derived from the timestamp.
  */
-export function mergeParticipants(
+function computePhase(state: GridState): GridState {
+  if (!state.votingStartedAt) return state;
+
+  const elapsed = Date.now() - state.votingStartedAt;
+  if (elapsed >= VOTING_DURATION_MS && state.phase === 'voting') {
+    return { ...state, phase: 'revealed' };
+  }
+  return state;
+}
+
+/**
+ * Merge client-known data into the server's room state.
+ * This ensures fresh serverless instances learn about active rounds and participants.
+ */
+export function mergeClientData(
   roomId: string,
-  participants: Record<string, string>,
-  names: Record<string, string>
+  data: {
+    participants?: Record<string, string>;
+    names?: Record<string, string>;
+    votingStartedAt?: number | null;
+    votes?: Vote[];
+  }
 ): void {
   const room = getRoom(roomId);
-  room.state = {
-    ...room.state,
-    participants: { ...room.state.participants, ...participants },
-    names: { ...room.state.names, ...names },
-  };
+
+  const clientRound = data.votingStartedAt || 0;
+  const serverRound = room.state.votingStartedAt || 0;
+
+  // If the client knows about a newer round, adopt it
+  if (clientRound > serverRound) {
+    room.state = {
+      ...room.state,
+      votingStartedAt: data.votingStartedAt!,
+      phase: 'voting',
+      votes: data.votes || room.state.votes,
+    };
+  }
+
+  // Always merge participants/names
+  if (data.participants) {
+    room.state = {
+      ...room.state,
+      participants: { ...room.state.participants, ...data.participants },
+    };
+  }
+  if (data.names) {
+    room.state = {
+      ...room.state,
+      names: { ...room.state.names, ...data.names },
+    };
+  }
 }
 
 export function getState(roomId: string): GridState {
-  return getRoom(roomId).state;
+  const room = getRoom(roomId);
+  // Always compute phase from time before returning
+  room.state = computePhase(room.state);
+  return room.state;
 }
 
 export function joinRoom(
@@ -83,15 +123,16 @@ export function setName(roomId: string, participantId: string, name: string): Gr
 export function vote(roomId: string, v: Vote, votingStartedAt?: number): GridState {
   const room = getRoom(roomId);
 
-  // If this instance doesn't know about voting, but the client says it's active, trust it
-  if (room.state.phase !== 'voting' && votingStartedAt) {
-    const elapsed = Date.now() - votingStartedAt;
-    if (elapsed < VOTING_DURATION_MS) {
-      room.state = { ...room.state, phase: 'voting', votingStartedAt };
-      scheduleReveal(room);
+  // If this instance doesn't know about the round, trust the client
+  if (votingStartedAt) {
+    const serverRound = room.state.votingStartedAt || 0;
+    if (votingStartedAt > serverRound) {
+      room.state = { ...room.state, votingStartedAt, phase: 'voting' };
     }
   }
 
+  // Compute phase from time
+  room.state = computePhase(room.state);
   if (room.state.phase !== 'voting') return room.state;
 
   room.state = {
@@ -104,8 +145,6 @@ export function vote(roomId: string, v: Vote, votingStartedAt?: number): GridSta
 export function startVoting(roomId: string): GridState {
   const room = getRoom(roomId);
 
-  if (room.revealTimer) clearTimeout(room.revealTimer);
-
   room.state = {
     ...room.state,
     votes: [],
@@ -113,20 +152,7 @@ export function startVoting(roomId: string): GridState {
     votingStartedAt: Date.now(),
   };
 
-  scheduleReveal(room);
   return room.state;
-}
-
-function scheduleReveal(room: RoomState) {
-  if (room.revealTimer) clearTimeout(room.revealTimer);
-
-  const elapsed = Date.now() - (room.state.votingStartedAt || Date.now());
-  const remaining = Math.max(0, VOTING_DURATION_MS - elapsed);
-
-  room.revealTimer = setTimeout(() => {
-    room.state = { ...room.state, phase: 'revealed' };
-    room.revealTimer = null;
-  }, remaining);
 }
 
 export function roomExists(roomId: string): boolean {

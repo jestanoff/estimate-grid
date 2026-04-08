@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import type { GridState, Phase } from './grid';
-import { INITIAL_GRID_STATE } from './grid';
+import { INITIAL_GRID_STATE, VOTING_DURATION_MS } from './grid';
 
 const POLL_INTERVAL = 500;
 
@@ -13,51 +13,71 @@ const PHASE_ORDER: Record<Phase, number> = {
 };
 
 /**
- * Decide whether incoming server state should replace the current client state.
- * Rules:
- * - If the incoming state is from a newer round (higher votingStartedAt), always accept
- * - If same round, only accept if the phase is equal or further along
- * - If same round + same phase, accept if it has more or equal votes (more = more up to date)
- * - If incoming is from an older round, reject entirely
- * - Always merge participants/names regardless
+ * Derive the correct phase from votingStartedAt.
+ * If voting started and the time has elapsed, phase is 'revealed'.
+ */
+function computePhase(state: GridState): GridState {
+  if (state.votingStartedAt && state.phase === 'voting') {
+    const elapsed = Date.now() - state.votingStartedAt;
+    if (elapsed >= VOTING_DURATION_MS) {
+      return { ...state, phase: 'revealed' };
+    }
+  }
+  return state;
+}
+
+/**
+ * Merge incoming server state with the current client state.
+ * - Newer round (higher votingStartedAt) always wins
+ * - Same round: phase only moves forward, votes prefer the larger set
+ * - Older round: rejected (only merge participants/names)
+ * - Participants/names always merged
  */
 function mergeState(prev: GridState, incoming: GridState): GridState {
-  const mergedParticipants = { ...prev.participants, ...incoming.participants };
-  const mergedNames = { ...prev.names, ...incoming.names };
+  // Compute correct phase for both before comparing
+  const prevComputed = computePhase(prev);
+  const incomingComputed = computePhase(incoming);
 
-  const prevRound = prev.votingStartedAt || 0;
-  const incomingRound = incoming.votingStartedAt || 0;
+  const mergedParticipants = { ...prevComputed.participants, ...incomingComputed.participants };
+  const mergedNames = { ...prevComputed.names, ...incomingComputed.names };
+
+  const prevRound = prevComputed.votingStartedAt || 0;
+  const incomingRound = incomingComputed.votingStartedAt || 0;
 
   // Newer round — accept fully
   if (incomingRound > prevRound) {
-    return { ...incoming, participants: mergedParticipants, names: mergedNames };
+    return { ...incomingComputed, participants: mergedParticipants, names: mergedNames };
   }
 
   // Older round — keep current, just merge participants/names
   if (incomingRound < prevRound) {
-    return { ...prev, participants: mergedParticipants, names: mergedNames };
+    return { ...prevComputed, participants: mergedParticipants, names: mergedNames };
   }
 
   // Same round — only move phase forward, never backward
-  const prevPhase = PHASE_ORDER[prev.phase];
-  const incomingPhase = PHASE_ORDER[incoming.phase];
+  const prevPhase = PHASE_ORDER[prevComputed.phase];
+  const incomingPhase = PHASE_ORDER[incomingComputed.phase];
 
   if (incomingPhase < prevPhase) {
-    // Stale phase from another instance — keep current
-    return { ...prev, participants: mergedParticipants, names: mergedNames };
+    return { ...prevComputed, participants: mergedParticipants, names: mergedNames };
   }
 
   if (incomingPhase > prevPhase) {
-    // Phase advanced — accept
-    return { ...incoming, participants: mergedParticipants, names: mergedNames };
+    return { ...incomingComputed, participants: mergedParticipants, names: mergedNames };
   }
 
-  // Same round, same phase — keep the one with more votes
-  if (incoming.votes.length >= prev.votes.length) {
-    return { ...incoming, participants: mergedParticipants, names: mergedNames };
+  // Same round, same phase — merge votes (union by participantId, prefer incoming for conflicts)
+  const voteMap = new Map(prevComputed.votes.map((v) => [v.participantId, v]));
+  for (const v of incomingComputed.votes) {
+    voteMap.set(v.participantId, v);
   }
 
-  return { ...prev, participants: mergedParticipants, names: mergedNames };
+  return {
+    ...incomingComputed,
+    votes: Array.from(voteMap.values()),
+    participants: mergedParticipants,
+    names: mergedNames,
+  };
 }
 
 export function useGridState(roomId: string): {
@@ -68,6 +88,24 @@ export function useGridState(roomId: string): {
   const stateRef = useRef(state);
   stateRef.current = state;
 
+  // Client-side timer: transition voting → revealed when time elapses
+  useEffect(() => {
+    if (state.phase !== 'voting' || !state.votingStartedAt) return;
+
+    const remaining = VOTING_DURATION_MS - (Date.now() - state.votingStartedAt);
+    if (remaining <= 0) {
+      setState((prev) => computePhase(prev));
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setState((prev) => computePhase(prev));
+    }, remaining);
+
+    return () => clearTimeout(timer);
+  }, [state.phase, state.votingStartedAt]);
+
+  // Polling
   useEffect(() => {
     let active = true;
 
@@ -81,6 +119,8 @@ export function useGridState(roomId: string): {
             body: JSON.stringify({
               participants: current.participants,
               names: current.names,
+              votingStartedAt: current.votingStartedAt,
+              votes: current.votes,
             }),
           });
           if (res.ok) {

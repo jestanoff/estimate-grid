@@ -1,6 +1,6 @@
 'use client';
 
-import { GRID_VALUES, type GridValue, VOTING_DURATION_MS } from '@/lib/grid';
+import { GRID_VALUES, type GridValue, VOTING_DURATION_MS, KEY_TO_CELL, cellCenter } from '@/lib/grid';
 import { useGridState } from '@/lib/useGridState';
 import { useParticipant } from '@/lib/useParticipant';
 import { useRef, useState, useEffect, type MouseEvent } from 'react';
@@ -99,6 +99,50 @@ export function Grid({ roomId }: Props) {
       updateState(await res.json());
     }
   }
+
+  async function voteForCell(cell: GridValue) {
+    if (!participant || state.phase !== 'voting') return;
+    const { x, y } = cellCenter(cell);
+    const res = await fetch(`/api/room/${roomId}/vote`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        participantId: participant.id,
+        emoji: participant.emoji,
+        cell,
+        x,
+        y,
+        votingStartedAt: state.votingStartedAt,
+        participants: state.participants,
+        names: state.names,
+      }),
+    });
+    if (res.ok) {
+      updateState(await res.json());
+    }
+  }
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (editingName) return;
+
+      if (e.key === 'Enter' && isAdmin && !isVoting) {
+        e.preventDefault();
+        handleStart();
+        return;
+      }
+
+      const cell = KEY_TO_CELL[e.key];
+      if (cell) {
+        e.preventDefault();
+        voteForCell(cell);
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  });
 
   async function handleNameSubmit() {
     const trimmed = nameInput.trim();
@@ -257,6 +301,12 @@ export function Grid({ roomId }: Props) {
               </button>
             </div>
           )}
+
+          <div className={styles.shortcuts}>
+            {isAdmin && <div><kbd>Enter</kbd> Start voting</div>}
+            <div><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>5</kbd><kbd>8</kbd> Vote</div>
+            <div><kbd>=</kbd> ∞ &nbsp; <kbd>?</kbd> ?</div>
+          </div>
         </div>
       </div>
     </>

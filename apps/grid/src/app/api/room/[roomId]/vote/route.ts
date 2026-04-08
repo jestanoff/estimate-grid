@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { vote, mergeParticipants } from '@/lib/store';
+import { vote, mergeClientData } from '@/lib/store';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ roomId: string }> }) {
   const { roomId } = await params;
@@ -11,7 +11,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ roo
   }
 
   if (participants && names) {
-    mergeParticipants(roomId, participants, names);
+    mergeClientData(roomId, { participants, names, votingStartedAt });
   }
 
   const state = vote(roomId, { participantId, emoji, cell, x, y }, votingStartedAt);
