@@ -4,7 +4,6 @@ import { getRandomEmoji, pickRandomCategory, type EmojiCategory } from './emojis
 type RoomState = {
   state: GridState;
   emojiCategory: EmojiCategory;
-  listeners: Set<(state: GridState) => void>;
   revealTimer: ReturnType<typeof setTimeout> | null;
 };
 
@@ -16,12 +15,29 @@ function getRoom(roomId: string): RoomState {
     room = {
       state: { ...INITIAL_GRID_STATE, votes: [], participants: {}, names: {} },
       emojiCategory: pickRandomCategory(),
-      listeners: new Set(),
       revealTimer: null,
     };
     rooms.set(roomId, room);
   }
   return room;
+}
+
+/**
+ * Merge client-known participants/names into the server's room state.
+ * This ensures that even if a serverless instance is fresh, it learns
+ * about all participants from the client's request.
+ */
+export function mergeParticipants(
+  roomId: string,
+  participants: Record<string, string>,
+  names: Record<string, string>
+): void {
+  const room = getRoom(roomId);
+  room.state = {
+    ...room.state,
+    participants: { ...room.state.participants, ...participants },
+    names: { ...room.state.names, ...names },
+  };
 }
 
 export function getState(roomId: string): GridState {
@@ -36,7 +52,6 @@ export function joinRoom(
 ): { emoji: string; state: GridState } {
   const room = getRoom(roomId);
 
-  // Priority: already assigned > client-preferred > random
   let emoji = room.state.participants[participantId];
   if (!emoji && preferredEmoji) {
     emoji = preferredEmoji;
@@ -53,7 +68,6 @@ export function joinRoom(
       ? { ...room.state.names, [participantId]: name }
       : room.state.names,
   };
-  notify(room);
   return { emoji, state: room.state };
 }
 
@@ -63,19 +77,27 @@ export function setName(roomId: string, participantId: string, name: string): Gr
     ...room.state,
     names: { ...room.state.names, [participantId]: name },
   };
-  notify(room);
   return room.state;
 }
 
-export function vote(roomId: string, v: Vote): GridState {
+export function vote(roomId: string, v: Vote, votingStartedAt?: number): GridState {
   const room = getRoom(roomId);
+
+  // If this instance doesn't know about voting, but the client says it's active, trust it
+  if (room.state.phase !== 'voting' && votingStartedAt) {
+    const elapsed = Date.now() - votingStartedAt;
+    if (elapsed < VOTING_DURATION_MS) {
+      room.state = { ...room.state, phase: 'voting', votingStartedAt };
+      scheduleReveal(room);
+    }
+  }
+
   if (room.state.phase !== 'voting') return room.state;
 
   room.state = {
     ...room.state,
     votes: [...room.state.votes.filter((e) => e.participantId !== v.participantId), v],
   };
-  notify(room);
   return room.state;
 }
 
@@ -90,21 +112,21 @@ export function startVoting(roomId: string): GridState {
     phase: 'voting',
     votingStartedAt: Date.now(),
   };
-  notify(room);
 
-  room.revealTimer = setTimeout(() => {
-    room.state = { ...room.state, phase: 'revealed' };
-    notify(room);
-    room.revealTimer = null;
-  }, VOTING_DURATION_MS);
-
+  scheduleReveal(room);
   return room.state;
 }
 
-export function subscribe(roomId: string, listener: (state: GridState) => void) {
-  const room = getRoom(roomId);
-  room.listeners.add(listener);
-  return () => room.listeners.delete(listener);
+function scheduleReveal(room: RoomState) {
+  if (room.revealTimer) clearTimeout(room.revealTimer);
+
+  const elapsed = Date.now() - (room.state.votingStartedAt || Date.now());
+  const remaining = Math.max(0, VOTING_DURATION_MS - elapsed);
+
+  room.revealTimer = setTimeout(() => {
+    room.state = { ...room.state, phase: 'revealed' };
+    room.revealTimer = null;
+  }, remaining);
 }
 
 export function roomExists(roomId: string): boolean {
@@ -114,8 +136,4 @@ export function roomExists(roomId: string): boolean {
 export function createRoom(roomId: string, adminId: string): void {
   const room = getRoom(roomId);
   room.state = { ...room.state, adminId };
-}
-
-function notify(room: RoomState) {
-  room.listeners.forEach((fn) => fn(room.state));
 }

@@ -5,7 +5,7 @@ const CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
 function generateId(): string {
   let id = '';
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 3; i++) {
     id += CHARS[Math.floor(Math.random() * CHARS.length)];
   }
   return id;

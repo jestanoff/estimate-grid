@@ -5,6 +5,7 @@ import { useGridState } from '@/lib/useGridState';
 import { useParticipant } from '@/lib/useParticipant';
 import { useRef, useState, useEffect, type MouseEvent } from 'react';
 import { GridCell } from './GridCell';
+import { KaluzaLogo } from './KaluzaLogo';
 import styles from './Grid.module.css';
 
 type Props = {
@@ -12,7 +13,7 @@ type Props = {
 };
 
 export function Grid({ roomId }: Props) {
-  const state = useGridState(roomId);
+  const { state, updateState } = useGridState(roomId);
   const { participant, setName } = useParticipant(roomId);
   const gridRef = useRef<HTMLDivElement>(null);
   const [progress, setProgress] = useState(0);
@@ -72,7 +73,7 @@ export function Grid({ roomId }: Props) {
     const cellIndex = row * 3 + col;
     const cell = GRID_VALUES[cellIndex];
 
-    await fetch(`/api/room/${roomId}/vote`, {
+    const res = await fetch(`/api/room/${roomId}/vote`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -81,13 +82,22 @@ export function Grid({ roomId }: Props) {
         cell,
         x,
         y,
+        votingStartedAt: state.votingStartedAt,
+        participants: state.participants,
+        names: state.names,
       }),
     });
+    if (res.ok) {
+      updateState(await res.json());
+    }
   }
 
   async function handleStart() {
     if (isVoting) return;
-    await fetch(`/api/room/${roomId}/start`, { method: 'POST' });
+    const res = await fetch(`/api/room/${roomId}/start`, { method: 'POST' });
+    if (res.ok) {
+      updateState(await res.json());
+    }
   }
 
   async function handleNameSubmit() {
@@ -107,6 +117,10 @@ export function Grid({ roomId }: Props) {
           className={styles.progressFill}
           style={{ width: `${progress}%` }}
         />
+      </div>
+
+      <div className={styles.logo}>
+        <KaluzaLogo />
       </div>
 
       <div className={styles.container}>
