@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createRoom, roomExists } from '@/lib/store';
+import { logReq, logRes } from '@/lib/debug';
 
 const CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 const MAX_RETRIES = 10;
@@ -14,6 +15,7 @@ function generateId(): string {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
+  logReq(req, body);
   const { adminId } = body;
 
   if (!adminId) {
@@ -32,5 +34,7 @@ export async function POST(req: NextRequest) {
   }
 
   createRoom(roomId, adminId);
-  return NextResponse.json({ roomId });
+  const res = { roomId };
+  logRes(req, res);
+  return NextResponse.json(res);
 }

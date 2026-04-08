@@ -69,7 +69,7 @@ export function Grid({ roomId }: Props) {
     const y = ((e.clientY - rect.top) / rect.height) * 100;
 
     const col = Math.min(2, Math.floor((x / 100) * 3));
-    const row = Math.min(2, Math.floor((y / 100) * 3));
+    const row = Math.min(1, Math.floor((y / 100) * 2));
     const cellIndex = row * 3 + col;
     const cell = GRID_VALUES[cellIndex];
 
