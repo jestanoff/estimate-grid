@@ -242,6 +242,7 @@ export function Grid({ roomId }: Props) {
               >
                 {participant.name || 'Set name'}
               </button>
+              {isAdmin && <span className={styles.adminTag}>admin</span>}
             </div>
           )}
 
@@ -254,6 +255,9 @@ export function Grid({ roomId }: Props) {
                   <span className={styles.legendName}>
                     {state.names[pid] || '—'}
                     {pid === participant?.id ? ' (you)' : ''}
+                    {(pid === participant?.id && isAdmin) || pid === state.adminId
+                      ? <span className={styles.adminTag}>admin</span>
+                      : null}
                   </span>
                 </div>
               ))}
