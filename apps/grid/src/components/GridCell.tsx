@@ -14,7 +14,7 @@ export function GridCell({ value, isMyVote, row, col }: Props) {
   const outerClasses = [
     styles.cell,
     col < 2 ? styles.borderRight : '',
-    row < 2 ? styles.borderBottom : '',
+    row < 1 ? styles.borderBottom : '',
   ]
     .filter(Boolean)
     .join(' ');

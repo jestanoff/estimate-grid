@@ -3,8 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack -p 3030",
-    "dev:watch": "next dev --turbopack -p 3030",
+    "dev": "rm -rf .next && next dev --turbopack -p 3030",
+    "dev:watch": "rm -rf .next && next dev --turbopack -p 3030",
+    "prebuild": "rm -rf .next",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"

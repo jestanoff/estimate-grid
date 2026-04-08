@@ -1,6 +1,6 @@
 'use client';
 
-import { GRID_VALUES, type GridValue, VOTING_DURATION_MS, KEY_TO_CELL, cellCenter } from '@/lib/grid';
+import { GRID_VALUES, type GridValue, VOTING_DURATION_MS, KEY_TO_CELL, cellPosition } from '@/lib/grid';
 import { useGridState } from '@/lib/useGridState';
 import { useParticipant } from '@/lib/useParticipant';
 import { useRef, useState, useEffect, type MouseEvent } from 'react';
@@ -102,7 +102,9 @@ export function Grid({ roomId }: Props) {
 
   async function voteForCell(cell: GridValue) {
     if (!participant || state.phase !== 'voting') return;
-    const { x, y } = cellCenter(cell);
+    const participantIds = Object.keys(state.participants);
+    const myIndex = Math.max(0, participantIds.indexOf(participant.id));
+    const { x, y } = cellPosition(cell, myIndex);
     const res = await fetch(`/api/room/${roomId}/vote`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -304,8 +306,8 @@ export function Grid({ roomId }: Props) {
 
           <div className={styles.shortcuts}>
             {isAdmin && <div><kbd>Enter</kbd> Start voting</div>}
-            <div><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>5</kbd><kbd>8</kbd> Vote</div>
-            <div><kbd>=</kbd> ∞ &nbsp; <kbd>?</kbd> ?</div>
+            <div><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>5</kbd> Vote</div>
+            <div><kbd>.</kbd> ∞ &nbsp; <kbd>/</kbd> ?</div>
           </div>
         </div>
       </div>
