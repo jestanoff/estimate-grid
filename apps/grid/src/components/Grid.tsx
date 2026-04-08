@@ -154,7 +154,9 @@ export function Grid({ roomId }: Props) {
     }
   }
 
-  const participantEntries = Object.entries(state.participants);
+  const participantEntries = Object.entries(state.participants).filter(
+    ([pid]) => pid !== participant?.id
+  );
 
   return (
     <>
@@ -254,8 +256,7 @@ export function Grid({ roomId }: Props) {
                   <span className={styles.legendEmoji}>{emoji}</span>
                   <span className={styles.legendName}>
                     {state.names[pid] || '—'}
-                    {pid === participant?.id ? ' (you)' : ''}
-                    {(pid === participant?.id && isAdmin) || pid === state.adminId
+                    {pid === state.adminId
                       ? <span className={styles.adminTag}>admin</span>
                       : null}
                   </span>

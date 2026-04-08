@@ -63,7 +63,7 @@
 
 .placedEmoji {
   position: absolute;
-  font-size: 3.75rem;
+  font-size: min(calc((100vh - 32px) / 6 * 0.7), calc((100vw - 164px) / 9 * 0.7));
   line-height: 1;
   transform: translate(-50%, -50%);
   pointer-events: auto;

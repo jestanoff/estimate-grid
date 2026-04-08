@@ -1,10 +1,8 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import type { GridState, Phase } from './grid';
 import { INITIAL_GRID_STATE, VOTING_DURATION_MS } from './grid';
-
-const POLL_INTERVAL = 500;
 
 const PHASE_ORDER: Record<Phase, number> = {
   waiting: 0,
@@ -85,8 +83,6 @@ export function useGridState(roomId: string): {
   updateState: (state: GridState) => void;
 } {
   const [state, setState] = useState<GridState>(INITIAL_GRID_STATE);
-  const stateRef = useRef(state);
-  stateRef.current = state;
 
   // Client-side timer: transition voting → revealed when time elapses
   useEffect(() => {
@@ -105,38 +101,20 @@ export function useGridState(roomId: string): {
     return () => clearTimeout(timer);
   }, [state.phase, state.votingStartedAt]);
 
-  // Polling
+  // SSE: server pushes state whenever it changes
   useEffect(() => {
-    let active = true;
+    const es = new EventSource(`/api/room/${roomId}/events`);
 
-    async function poll() {
-      while (active) {
-        try {
-          const current = stateRef.current;
-          const res = await fetch(`/api/room/${roomId}/state`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              participants: current.participants,
-              votingStartedAt: current.votingStartedAt,
-              votes: current.votes,
-            }),
-          });
-          if (res.ok) {
-            const data = await res.json();
-            if (active) {
-              setState((prev) => mergeState(prev, data));
-            }
-          }
-        } catch {
-          // ignore fetch errors, retry on next poll
-        }
-        await new Promise((r) => setTimeout(r, POLL_INTERVAL));
+    es.onmessage = (e) => {
+      try {
+        const data: GridState = JSON.parse(e.data);
+        setState((prev) => mergeState(prev, data));
+      } catch {
+        // ignore parse errors
       }
-    }
+    };
 
-    poll();
-    return () => { active = false; };
+    return () => es.close();
   }, [roomId]);
 
   const updateState = useCallback((newState: GridState) => {

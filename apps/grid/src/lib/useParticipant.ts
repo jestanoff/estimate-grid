@@ -57,8 +57,16 @@ export function useParticipant(roomId: string): {
         emoji: roomData?.emoji || undefined,
       }),
     })
-      .then((res) => res.json())
-      .then(({ emoji }) => {
+      .then((res) => {
+        if (res.status === 404) {
+          window.location.href = '/';
+          return null;
+        }
+        return res.json();
+      })
+      .then((data) => {
+        if (!data) return;
+        const { emoji } = data;
         // Persist the emoji the server gave us (or confirmed)
         setRoomData(roomId, {
           emoji,

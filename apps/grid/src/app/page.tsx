@@ -47,7 +47,7 @@ export default function Home() {
         A collaborative planning and voting tool for teams.
       </p>
       <button className={styles.button} onClick={handleCreate} disabled={loading || !ready}>
-        {loading ? 'Creating...' : 'Create new board'}
+        {loading ? 'Creating...' : 'Create new voting grid'}
       </button>
     </main>
   );
