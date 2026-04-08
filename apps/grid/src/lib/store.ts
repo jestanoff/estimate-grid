@@ -31,11 +31,16 @@ export function getState(roomId: string): GridState {
 export function joinRoom(
   roomId: string,
   participantId: string,
-  name?: string
+  name?: string,
+  preferredEmoji?: string
 ): { emoji: string; state: GridState } {
   const room = getRoom(roomId);
 
+  // Priority: already assigned > client-preferred > random
   let emoji = room.state.participants[participantId];
+  if (!emoji && preferredEmoji) {
+    emoji = preferredEmoji;
+  }
   if (!emoji) {
     const takenEmojis = Object.values(room.state.participants);
     emoji = getRandomEmoji(room.emojiCategory, takenEmojis);

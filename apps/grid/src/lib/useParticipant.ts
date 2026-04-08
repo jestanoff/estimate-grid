@@ -6,7 +6,31 @@ export type Participant = {
   id: string;
   emoji: string;
   name: string;
+  isAdmin: boolean;
 };
+
+type RoomData = {
+  emoji: string;
+  isAdmin: boolean;
+};
+
+function getRoomData(roomId: string): RoomData | null {
+  try {
+    const stored = localStorage.getItem(`grid-room-${roomId}`);
+    return stored ? JSON.parse(stored) : null;
+  } catch {
+    return null;
+  }
+}
+
+function setRoomData(roomId: string, data: RoomData): void {
+  localStorage.setItem(`grid-room-${roomId}`, JSON.stringify(data));
+}
+
+export function markAsAdmin(roomId: string): void {
+  const existing = getRoomData(roomId);
+  setRoomData(roomId, { emoji: existing?.emoji || '', isAdmin: true });
+}
 
 export function useParticipant(roomId: string): {
   participant: Participant | null;
@@ -22,15 +46,30 @@ export function useParticipant(roomId: string): {
     }
 
     const storedName = localStorage.getItem('grid-participant-name') || '';
+    const roomData = getRoomData(roomId);
 
     fetch(`/api/room/${roomId}/join`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ participantId: id, name: storedName || undefined }),
+      body: JSON.stringify({
+        participantId: id,
+        name: storedName || undefined,
+        emoji: roomData?.emoji || undefined,
+      }),
     })
       .then((res) => res.json())
       .then(({ emoji }) => {
-        setParticipant({ id: id!, emoji, name: storedName });
+        // Persist the emoji the server gave us (or confirmed)
+        setRoomData(roomId, {
+          emoji,
+          isAdmin: roomData?.isAdmin || false,
+        });
+        setParticipant({
+          id: id!,
+          emoji,
+          name: storedName,
+          isAdmin: roomData?.isAdmin || false,
+        });
       });
   }, [roomId]);
 

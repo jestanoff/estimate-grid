@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { markAsAdmin } from '@/lib/useParticipant';
 import styles from './page.module.css';
 
 function getOrCreateParticipantId(): string {
@@ -31,6 +32,7 @@ export default function Home() {
       body: JSON.stringify({ adminId }),
     });
     const { roomId } = await res.json();
+    markAsAdmin(roomId);
     router.push(`/${roomId}`);
   }
 

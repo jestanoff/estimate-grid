@@ -23,7 +23,7 @@ export function Grid({ roomId }: Props) {
     ? state.votes.find((v) => v.participantId === participant.id)
     : undefined;
 
-  const isAdmin = participant != null && state.adminId === participant.id;
+  const isAdmin = participant?.isAdmin ?? false;
   const isVoting = state.phase === 'voting';
   const isRevealed = state.phase === 'revealed';
 
