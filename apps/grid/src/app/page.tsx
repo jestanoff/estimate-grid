@@ -1,7 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { markAsAdmin } from '@/lib/useParticipant';
 import { KaluzaLogo } from '@/components/KaluzaLogo';
 import styles from './page.module.css';
@@ -16,13 +15,7 @@ function getOrCreateParticipantId(): string {
 }
 
 export default function Home() {
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    setReady(true);
-  }, []);
 
   async function handleCreate() {
     setLoading(true);
@@ -34,7 +27,7 @@ export default function Home() {
     });
     const { roomId } = await res.json();
     markAsAdmin(roomId);
-    router.push(`/${roomId}`);
+    window.location.href = `/${roomId}`;
   }
 
   return (
@@ -46,7 +39,7 @@ export default function Home() {
       <p className={styles.subtitle}>
         A collaborative planning and voting tool for teams.
       </p>
-      <button className={styles.button} onClick={handleCreate} disabled={loading || !ready}>
+      <button className={styles.button} onClick={handleCreate} disabled={loading}>
         {loading ? 'Creating...' : 'Create new voting grid'}
       </button>
     </main>
