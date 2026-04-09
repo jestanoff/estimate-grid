@@ -40,8 +40,8 @@ export const KEY_TO_CELL: Record<string, GridValue> = {
   '2': '2',
   '3': '3',
   '5': '5',
-  '.': '∞',
-  '/': '?',
+  'e': '∞',
+  'q': '?',
 };
 
 /**

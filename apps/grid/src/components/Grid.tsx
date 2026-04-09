@@ -312,7 +312,7 @@ export function Grid({ roomId }: Props) {
           <div className={styles.shortcuts}>
             {isAdmin && <div><kbd>Enter</kbd> Start voting</div>}
             <div><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>5</kbd> Vote</div>
-            <div><kbd>.</kbd> ∞ &nbsp; <kbd>/</kbd> ?</div>
+            <div><kbd>e</kbd> ∞ &nbsp; <kbd>q</kbd> ?</div>
           </div>
         </div>
       </div>
